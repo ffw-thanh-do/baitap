@@ -1,0 +1,307 @@
+<?php
+
+/**
+ * @file
+ * ies_admin.module
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function ies_admin_menu() {
+
+  // Create the IES Admin Tools custom menu if it does not already exist.
+  $menu = array(
+    'menu_name' => 'ies_admin_tools',
+    'title' => 'IES Admin Tools',
+    'description' => 'Collection of Administration tools for management of IES specific content',
+  );
+  menu_save($menu);
+
+  $items = array();
+
+  $items['admin/ies'] = array(
+    'title' => 'IES Admin Tools',
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'ies_admin_tools',
+  );
+
+  $items['admin/ies/components'] = array(
+    'title' => 'Control Active Components',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ies_admin_control_active_components'),
+    'access arguments' => array('administer functional components'),
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'ies_admin_tools',
+  );
+
+  $items['ies/temporarily-unavailable'] = array(
+    'page callback' => 'ies_admin_functionality_disabled',
+    'page arguments' => array(),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ies_admin_permission() {
+  return array(
+    'administer functional components' => array(
+      'title' => t('Administer Functional Site Components'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function ies_admin_block_info() {
+  $blocks = array();
+  $blocks['ies-tools'] = array(
+    'info' => t('IES Admin Tools'),
+    'cache' => DRUPAL_NO_CACHE,
+    'admin' => TRUE,
+    'weight' => 50,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ies_admin_block_view($delta) {
+  switch ($delta) {
+    case 'ies-tools':
+      $item = menu_get_item('admin/ies');
+      if ($item && $item['access']) {
+        $tree = menu_tree_all_data('ies_admin_tools');
+        foreach ($tree as $key => $branch) {
+          if ($branch['link']['link_path'] !== 'admin/ies') {
+            unset($tree[$key]);
+          }
+        }
+        return array(
+          'subject' => !empty($item['title']) ? $item['title'] : t('Administer'),
+          'content' => menu_tree_output($tree),
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Form to enable or disable areas of functionality for IES website.
+ */
+function ies_admin_control_active_components($form, &$form_state) {
+
+  $form = array();
+
+  $form['description'] = array(
+    '#type' => 'item',
+    '#markup' => t('<p>This page allows administrators to deactivate pieces of functionality across the IES Abroad website.</p>
+      <p>Disabled functionality may be necessary in cases of migrations, routine maintenance or troubleshooting.  When a piece
+      of functionality is disabled, any user who attempts to access a page where this functionality exists will be redirected
+      to <a href="/ies/temporarily-unavailable">Temporary Unavailable</a> page where the entered message here will be displayed to them.</p>'),
+  );
+  $active_components = variable_get('active_components');
+  $form['login'] = array(
+    '#type' => 'radios',
+    '#title' => t('Account Login'),
+    '#description' => t('This affects the <i>/user</i> and <i>/study-abroad/advisors-faculty/partner-portal-login</i>.  Due to caching, the login form may still load, however the form submission will be blocked
+    and the user will be routed to the disabled messaging page'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_login_functionality'],
+  );
+
+  $form['register'] = array(
+    '#type' => 'radios',
+    '#title' => t('Account Create / Register'),
+    '#description' => t('This prevents page requests at <i>/user/register</i> from being allowed to create a new account'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_register_functionality'],
+  );
+
+  $form['contact_update'] = array(
+    '#type' => 'radios',
+    '#title' => t('Contact Info / Profile Updates'),
+    '#description' => t('This prevents the <i>/user/[uid]/edit</i> pages from being loaded so user cannot update any of their profile values'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_contact_update_functionality'],
+  );
+
+  $form['partner_portal'] = array(
+    '#type' => 'radios',
+    '#title' => t('Partner Portal'),
+    '#description' => t('This blocks all pages that contain <i>/partnerportal</i> from being accessible when disabled'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_partner_portal_functionality'],
+  );
+
+  $form['pp_student_authorization'] = array(
+    '#type' => 'radios',
+    '#title' => t('Partner Portal Student Authorization Controls'),
+    '#description' => t('Prevents <i>/partnerportal/students/authorize</i> from being accessible'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_partner_portal_authorize_students_functionality'],
+  );
+
+  $form['scholar'] = array(
+    '#type' => 'radios',
+    '#title' => t('Scholar Online Forms Portal'),
+    '#description' => t('Prevents any <i>/myiesabroad</i> page from being displayed to the user while disabled'),
+    '#required' => TRUE,
+    '#options' => array(
+      'enabled' => t('Enabled'),
+      'disabled' => t('Disabled'),
+    ),
+    '#default_value' => $active_components['ies_scholar_forms_functionality'],
+  );
+
+  $form['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Display Message'),
+    '#description' => t('Note that this message will be displayed for all currently disabled functionality so keep description generic.  If known provide an approximate timeframe before functionality will be restored.'),
+    '#default_value' => $active_components['functionality_disabled_message'],
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#validate' => array('ies_admin_control_active_components_validate'),
+    '#submit' => array('ies_admin_control_active_components_submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validate admin control active components form.
+ */
+function ies_admin_control_active_components_validate($form, &$form_state) {
+
+  // Ensure that if any values set to disabled, that a message is provided.
+  if (($form_state['values']['login'] == 'disabled' || $form_state['values']['register'] == 'disabled' ||
+    $form_state['values']['contact_update'] == 'disabled' || $form_state['values']['partner_portal'] == 'disabled' ||
+    $form_state['values']['pp_student_authorization'] == 'disabled' || $form_state['values']['scholar'] == 'disabled') &&
+    $form_state['values']['message'] == '') {
+    form_set_error('message', 'You need to provide a message to display to user attempting to access the disabled functionality.');
+  }
+}
+
+/**
+ * Submit admin control active components form.
+ */
+function ies_admin_control_active_components_submit($form, &$form_state) {
+  $active_components = [
+    'ies_login_functionality' => $form_state['values']['login'],
+    'ies_register_functionality' => $form_state['values']['register'],
+    'ies_contact_update_functionality' => $form_state['values']['contact_update'],
+    'ies_partner_portal_functionality' => $form_state['values']['partner_portal'],
+    'ies_partner_portal_authorize_students_functionality' => $form_state['values']['pp_student_authorization'],
+    'ies_scholar_forms_functionality' => $form_state['values']['scholar'],
+    'functionality_disabled_message' => $form_state['values']['message'],
+  ];
+
+  variable_set('active_components', $active_components);
+
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Implements hook_init().
+ *
+ * Use this to read page urls, and control functional constraints.
+ */
+function ies_admin_init() {
+
+  global $user;
+  $active_components = variable_get('active_components');
+  $current_page = $_SERVER["REQUEST_URI"];
+
+  // User login functionality.
+  // Main Login Page and Partner Portal SAC Login only known login pages.
+  if ($active_components['ies_login_functionality'] == 'disabled' &&
+      ($current_page == '/study-abroad/advisors-faculty/partner-portal-login')) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+  if ($active_components['ies_login_functionality'] == 'disabled' &&
+      ($current_page == '/user')) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  // User Register Functionality.
+  if ($active_components['ies_register_functionality'] == 'disabled' &&
+      ($current_page == '/user/register')) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  // Contact / Profile update Functionality.
+  if ($active_components['ies_contact_update_functionality'] == 'disabled' &&
+      (strpos($current_page, '/user/' . $user->uid . '/edit') !== FALSE)) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  // Partner Portal Functionality.
+  if ($active_components['ies_partner_portal_functionality'] == 'disabled' &&
+      (strpos($current_page, '/partnerportal') !== FALSE)) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  // Partner Portal Student Authorization Functionality.
+  if ($active_components['ies_partner_portal_authorize_students_functionality'] == 'disabled' &&
+      ($current_page == '/partnerportal/students/authorize')) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  // Scholar Functionality - Disable access to Student Portal.
+  if ($active_components['ies_scholar_forms_functionality'] == 'disabled' &&
+      ($current_page == '/myiesabroad')) {
+    drupal_goto('ies/temporarily-unavailable');
+  }
+
+  drupal_add_css(drupal_get_path('module', 'ies_admin') . '/css/ies_admin.css');
+
+}
+
+/**
+ * Build markup temporarily unavailable page.
+ *
+ * @return string
+ *   Markup unavailable page.
+ */
+function ies_admin_functionality_disabled() {
+  $active_components = variable_get('active_components');
+  $functionality_disabled_message = $active_components['functionality_disabled_message'];
+
+  if ($functionality_disabled_message != '' && $functionality_disabled_message != NULL) {
+    return $functionality_disabled_message;
+  }
+
+  return 'The page you are looking for is temporarily unavailable.  Please try your request again later.';
+}

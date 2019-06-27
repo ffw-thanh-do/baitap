@@ -1,0 +1,30 @@
+uuid: a3c753b0-4a92-4b35-a625-e7d1b6f8ecdb
+langcode: en
+status: true
+dependencies:
+  config:
+    - views.view.events
+  module:
+    - system
+    - views
+  theme:
+    - bartik
+id: views_block__events_block_2
+theme: bartik
+region: content
+weight: -2
+provider: null
+plugin: 'views_block:events-block_2'
+settings:
+  id: 'views_block:events-block_2'
+  label: 'Events calendar'
+  provider: views
+  label_display: visible
+  views_label: 'Events calendar'
+  items_per_page: none
+visibility:
+  request_path:
+    id: request_path
+    pages: "/events\r\n/events/*"
+    negate: false
+    context_mapping: {  }

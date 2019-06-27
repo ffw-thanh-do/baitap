@@ -1,0 +1,40 @@
+uuid: 98a15b10-fbe3-43ee-a756-e66f58779fbf
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.events.field_end_date
+    - field.field.node.events.field_start_date
+    - node.type.events
+  module:
+    - datetime
+    - user
+id: node.events.default
+targetEntityType: node
+bundle: events
+mode: default
+content:
+  field_end_date:
+    weight: 103
+    label: above
+    settings:
+      format_type: medium
+      timezone_override: ''
+    third_party_settings: {  }
+    type: datetime_default
+    region: content
+  field_start_date:
+    weight: 102
+    label: above
+    settings:
+      format_type: medium
+      timezone_override: ''
+    third_party_settings: {  }
+    type: datetime_default
+    region: content
+  links:
+    weight: 100
+    settings: {  }
+    third_party_settings: {  }
+    region: content
+hidden: {  }
