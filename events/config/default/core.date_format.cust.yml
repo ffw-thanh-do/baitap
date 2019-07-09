@@ -1,8 +1,0 @@
-uuid: 7f38cc9b-97aa-4f18-bc02-d73fec3c2e91
-langcode: en
-status: true
-dependencies: {  }
-id: cust
-label: Custom
-locked: false
-pattern: Ymd
